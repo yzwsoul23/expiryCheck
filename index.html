@@ -74,13 +74,45 @@
         }
         .expired { background: #ffebee; border-left: 4px solid #d32f2f; color: #c62828; }
         .half { background: #fff8e1; border-left: 4px solid #ffa000; color: #ff8f00; }
-        .safe { background: #e8f5e8; border-left: 4px solid #388e3c; color: #2e7d32; }
+        .safe { background: #e8f5e8; color: #2e7d32; }
         .highlight { font-weight: bold; }
         .note {
             font-size: 13px;
             color: #666;
             margin-top: 5px;
         }
+        .progress-container {
+            margin-top: 15px;
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .progress-bar {
+            height: 24px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 12px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .progress-fill.safe { background: linear-gradient(135deg, #4caf50, #66bb6a); }
+        .progress-fill.half { background: linear-gradient(135deg, #ff9800, #ffa726); }
+        .progress-fill.expired { background: linear-gradient(135deg, #f44336, #ef5350); }
     </style>
 </head>
 <body>
@@ -257,6 +289,19 @@
             const passedMs = today - manufactureDate;
             const passedDays = passedMs > 0 ? Math.ceil(passedMs / (1000 * 60 * 60 * 24)) : 0;
 
+            let progressPercent = 0;
+            let progressClass = '';
+            if (diffDays < 0) {
+                progressPercent = 100;
+                progressClass = 'expired';
+            } else if (passedDays > halfLifeDays) {
+                progressPercent = Math.min(100, Math.round((passedDays / totalLifeDays) * 100));
+                progressClass = 'half';
+            } else {
+                progressPercent = Math.min(100, Math.round((passedDays / totalLifeDays) * 100));
+                progressClass = 'safe';
+            }
+
             let statusHTML = '';
             let boxClass = '';
 
@@ -265,6 +310,15 @@
                     <p><span class="highlight">🚨 已过期！</span></p>
                     <p>过期日期：<strong>${expiryDate.toLocaleDateString()}</strong></p>
                     <p>已过期 <span class="highlight">${Math.abs(diffDays)}</span> 天</p>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>进度</span>
+                            <span>${progressPercent}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${progressClass}" style="width: ${progressPercent}%">${progressPercent}%</div>
+                        </div>
+                    </div>
                 `;
                 boxClass = 'expired';
             } else if (passedDays > halfLifeDays) {
@@ -272,6 +326,15 @@
                     <p><span class="highlight">⚠️ 未过期，但保质期已过半！</span></p>
                     <p>过期日期：<strong>${expiryDate.toLocaleDateString()}</strong></p>
                     <p>剩余时间：<strong>${formatRemainingTime(diffDays)}</strong></p>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>进度</span>
+                            <span>${progressPercent}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${progressClass}" style="width: ${progressPercent}%">${progressPercent}%</div>
+                        </div>
+                    </div>
                 `;
                 boxClass = 'half';
             } else {
@@ -279,6 +342,15 @@
                     <p><span class="highlight">✅ 状态良好，在保质期内</span></p>
                     <p>过期日期：<strong>${expiryDate.toLocaleDateString()}</strong></p>
                     <p>剩余时间：<strong>${formatRemainingTime(diffDays)}</strong></p>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>进度</span>
+                            <span>${progressPercent}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${progressClass}" style="width: ${progressPercent}%">${progressPercent}%</div>
+                        </div>
+                    </div>
                 `;
                 boxClass = 'safe';
             }
