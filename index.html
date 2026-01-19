@@ -177,6 +177,31 @@
                 // 创建唯一索引防止重复（值+单位组合）
                 store.createIndex('value_unit', ['value', 'unit'], { unique: true });
             }
+
+            const transaction = event.target.transaction;
+            const store = transaction.objectStore('periods');
+
+            const defaultPeriods = [
+                { value: 12, unit: 'months' },
+                { value: 10, unit: 'months' },
+                { value: 9, unit: 'months' },
+                { value: 8, unit: 'months' },
+                { value: 6, unit: 'months' },
+                { value: 5, unit: 'months' },
+                { value: 270, unit: 'days' },
+                { value: 200, unit: 'days' },
+                { value: 150, unit: 'days' }
+            ];
+
+            defaultPeriods.forEach(period => {
+                try {
+                    store.add(period);
+                } catch (e) {
+                    if (e.name !== 'ConstraintError') {
+                        console.error('添加预设保质期失败:', e);
+                    }
+                }
+            });
         };
 
         // 从数据库加载已保存的保质期
