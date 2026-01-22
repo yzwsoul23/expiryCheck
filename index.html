@@ -113,9 +113,106 @@
         .progress-fill.safe { background: linear-gradient(135deg, #4caf50, #66bb6a); }
         .progress-fill.half { background: linear-gradient(135deg, #ff9800, #ffa726); }
         .progress-fill.expired { background: linear-gradient(135deg, #f44336, #ef5350); }
+        .info-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1976d2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .info-btn:hover {
+            background: #0d47a1;
+            transform: scale(1.1);
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            margin: 20px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0d47a1;
+            margin: 0;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s;
+        }
+        .close-btn:hover {
+            color: #d32f2f;
+        }
+        .modal-content {
+            line-height: 1.8;
+            color: #333;
+        }
+        .modal-content h3 {
+            color: #1976d2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .modal-content p {
+            margin-bottom: 15px;
+        }
+        .modal-content strong {
+            color: #0d47a1;
+        }
     </style>
 </head>
 <body>
+    <button class="info-btn" onclick="toggleModal()" title="查看说明">💡</button>
+
     <div class="container">
         <h1>📦 保质期状态检查</h1>
 
@@ -158,6 +255,29 @@
         <div id="resultBox" class="result"></div>
     </div>
 
+    <!-- 说明弹窗 -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">💡 如何判断具体到期日？</h2>
+                <button class="close-btn" onclick="toggleModal()">×</button>
+            </div>
+            <div class="modal-content">
+                <p>面对包装上只写了生产日期和保质期天数的情况，您可以这样做来准确判断：</p>
+
+                <h3>首选：查看明确的"到期日"或"有效期至"</h3>
+                <p>最准确的方法是查看包装上是否直接标明了"到期日"或"有效期至"。根据国家市场监督管理总局的规定，如果标签上已经直接标注了到期日，那么就以这个日期为准，这是最没有歧义的方式。</p>
+
+                <h3>次选：根据产品类型推断常规算法</h3>
+                <p>如果包装上没有直接给出到期日，只有保质期天数，您可以参考以下常见的行业惯例进行推断：</p>
+
+                <p><strong>短保质期食品（如鲜牛奶、酸奶、短保面包）：</strong>这类食品为了确保新鲜度，厂家通常采用"从生产日次日计算"的规则。这样做的目的是为物流和销售留出更充足的时间，对消费者来说，也意味着在标注的保质期内能获得更新鲜的产品。所以，您例子中的产品如果是这类，到期日就可能是10月31日。</p>
+
+                <p><strong>长保质期食品（如饼干、罐头、包装零食）：</strong>这类食品更可能采用"从生产日当天计算"的规则。因此，到期日可能是10月30日。</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 初始化 IndexedDB
         let db;
@@ -189,8 +309,9 @@
                 { value: 6, unit: 'months' },
                 { value: 5, unit: 'months' },
                 { value: 270, unit: 'days' },
+                { value: 210, unit: 'days' },
                 { value: 200, unit: 'days' },
-                { value: 150, unit: 'days' }
+                { value: 150, unit: 'days' },
             ];
 
             defaultPeriods.forEach(period => {
@@ -293,14 +414,15 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 计算过期时间
+            // 计算过期时间（包括生产当天，所以减去1天）
             let expiryDate;
             if (unit === 'days') {
                 expiryDate = new Date(manufactureDate);
-                expiryDate.setDate(expiryDate.getDate() + shelfValue);
+                expiryDate.setDate(expiryDate.getDate() + shelfValue - 1);
             } else {
                 expiryDate = new Date(manufactureDate);
                 expiryDate.setMonth(expiryDate.getMonth() + shelfValue);
+                expiryDate.setDate(expiryDate.getDate() - 1);
             }
 
             // 时间差（天）
@@ -394,6 +516,17 @@
                 return `${months}个月`;
             } else {
                 return `${days}天`;
+            }
+        }
+
+        function toggleModal() {
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.toggle('active');
+        }
+
+        function closeModalOutside(event) {
+            if (event.target.id === 'modalOverlay') {
+                toggleModal();
             }
         }
     </script>
